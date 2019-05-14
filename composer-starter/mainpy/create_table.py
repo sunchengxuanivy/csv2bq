@@ -1,8 +1,10 @@
+import sys
+
 from google.cloud import bigquery
 
-project_name = 'fifty-shades-of-brown'
-dataset_id = 'dominatrix'
-table_id = 'loan_dominatrix'
+project_name = sys.argv[1]
+dataset_id = sys.argv[2]
+table_id = sys.argv[3]
 
 client = bigquery.Client(project=project_name)
 dataset_ref = client.create_dataset(dataset_id, exists_ok=True)

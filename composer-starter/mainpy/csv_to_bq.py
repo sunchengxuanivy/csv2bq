@@ -1,10 +1,11 @@
 import re
+import sys
 
 from google.cloud import storage, bigquery
 
-project_name = 'fifty-shades-of-brown'
-dataset_id = 'dominatrix'
-table_id = 'loan_dominatrix'
+project_name = sys.argv[1]
+dataset_id = sys.argv[2]
+table_id = sys.argv[3]
 
 storage_client = storage.Client()
 bucket = storage_client.get_bucket('src_raw-data_bucket')
@@ -14,7 +15,7 @@ for blob in objects:
     if re.match('.*\.csv', blob.name):
         urls.append('gs://{bucket}/{object}'.format(bucket='src_raw-data_bucket', object=blob.name))
 
-client = bigquery.Client(project='fifty-shades-of-brown')
+client = bigquery.Client(project=project_name)
 job_config = bigquery.LoadJobConfig()
 job_config.skip_leading_rows = 1
 job_config.quote_character = '\"'
