@@ -23,6 +23,13 @@ default_dag_args = {
 }
 
 cluster_name = 'bucket2bq-cluster-{{ ds_nodash }}'
+main_bucket = models.Variable.get('main_script_bucket')
+source_data_bucket = models.Variable.get('source_data_bucket')
+gcp_project_id = models.Variable.get('gcp_project_id')
+dataset_id = models.Variable.get('dataset_id')
+table_id = models.Variable.get('table_id')
+source_data = models.Variable.get('source_data')
+intermediate_dir = models.Variable.get('intermediate_dir')
 
 with models.DAG(
         'csv2bq',
@@ -44,29 +51,30 @@ with models.DAG(
     create_bq_tables = dataproc_operator.DataProcPySparkOperator(
         cluster_name=cluster_name,
         task_id='create_bq_tables',
-        main='gs://src_raw-data_bucket/create_table.py',
-        arguments=[models.Variable.get('gcp_project_id'), models.Variable.get('dataset_id'),
-                   models.Variable.get('table_id')]
+        main='gs://{}/create_table.py'.format(main_bucket),
+        arguments=[gcp_project_id, dataset_id, table_id]
     )
 
     file_etl = dataproc_operator.DataProcPySparkOperator(
         cluster_name=cluster_name,
         task_id='simple-file-etl',
-        main='gs://src_raw-data_bucket/file_etl.py'
+        main='gs://{}/file_etl.py'.format(main_bucket),
+        arguments=[source_data_bucket, source_data, intermediate_dir]
     )
 
     dump_data = dataproc_operator.DataProcPySparkOperator(
         cluster_name=cluster_name,
         task_id='csv-to-bigquery',
-        main='gs://src_raw-data_bucket/csv_to_bq.py',
-        arguments=[models.Variable.get('gcp_project_id'), models.Variable.get('dataset_id'),
-                   models.Variable.get('table_id')]
+        main='gs://{}/csv_to_bq.py'.format(main_bucket),
+        arguments=[gcp_project_id, dataset_id,
+                   table_id, source_data_bucket, intermediate_dir]
     )
 
     delete_inter_datafiles = dataproc_operator.DataProcPySparkOperator(
         cluster_name=cluster_name,
         task_id='delete-inter-datafiles',
-        main='gs://src_raw-data_bucket/rm_bucket_folder.py'
+        main='gs://{}/rm_bucket_folder.py'.format(main_bucket),
+        arguments=[source_data_bucket, intermediate_dir]
     )
     #
     # Run the Hadoop wordcount example installed on the Cloud Dataproc cluster

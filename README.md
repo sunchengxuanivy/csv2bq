@@ -3,13 +3,16 @@ For data ingestion part of POC
 
 
 1. Please create a Composer Environment, please place flow.py under the DAGs bucket.
-2. Please place all py files in mainpy folder under bucket gs://src_raw-data_bucket/, since it's hard coded of all main ref in flow.py.
+2. Please place all py files in mainpy folder under some bucket, and set this bucket name to variable main_script_bucket.
 3. Please direct to Airflow Console, click [Admin] --> [Variables], and import variables.json file. please adjust value accordingly.
 4. Go back to Environment Airflow webserver. the DAG will automatically run. and you may manually trigger it on console.
 
-NOTE: If you are configuring DAG in projects other than fifty-shades-of-brown, please go under bucket gs://src_raw-data_bucket/,
-and adjust permission of each and every needed .py objects to let related service account have read permission.
-sharing bucket is just a tactical solution. each project should have their own bucket.
+For variables, please create all buckets, service account first, and set the created to variables.
+please select 4 roles for the service account specified in the variables.json
+which are BigQuery Data Editor
+          BigQuery Job User
+          Dataproc Worker
+          Storage Object Admin
 
 As for union-all module. please create a service account under project house-of-brownies. Grand viewer permission of dataset fifty-shades-of-brown.know_when_you_are_beaten
 and dataset i-love-brownies-3000.thanos.loan_2 to this service account.

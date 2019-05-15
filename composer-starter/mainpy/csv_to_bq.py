@@ -6,14 +6,16 @@ from google.cloud import storage, bigquery
 project_name = sys.argv[1]
 dataset_id = sys.argv[2]
 table_id = sys.argv[3]
+source_data_bucket = sys.argv[4]
+intermediate_dir = sys.argv[5]
 
 storage_client = storage.Client()
-bucket = storage_client.get_bucket('src_raw-data_bucket')
-objects = bucket.list_blobs(prefix='loan-1')
+bucket = storage_client.get_bucket(source_data_bucket)
+objects = bucket.list_blobs(prefix=intermediate_dir)
 urls = []
 for blob in objects:
     if re.match('.*\.csv', blob.name):
-        urls.append('gs://{bucket}/{object}'.format(bucket='src_raw-data_bucket', object=blob.name))
+        urls.append('gs://{bucket}/{object}'.format(bucket=source_data_bucket, object=blob.name))
 
 client = bigquery.Client(project=project_name)
 job_config = bigquery.LoadJobConfig()

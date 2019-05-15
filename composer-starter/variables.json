@@ -1,8 +1,12 @@
 {
-  "dataproc_bucket": "dirty-dozen",
+  "dataproc_bucket": "markii-composer-created-dataproc-bucket",
   "dataproc_zone": "asia-south1-b",
-  "dataset_id": "know_when_you_are_beaten",
-  "gcp_project_id": "fifty-shades-of-brown",
-  "service_account": "bucket-to-bigquery@fifty-shades-of-brown.iam.gserviceaccount.com",
-  "table_id": "loan_1"
+  "dataset_id": "2nd_part",
+  "gcp_project_id": "mark-ii-240702",
+  "intermediate_dir": "intermediate",
+  "main_script_bucket": "here-to-place-main-scripts",
+  "service_account": "bucket-to-bigquery@mark-ii-240702.iam.gserviceaccount.com",
+  "source_data": "loan-2.csv",
+  "source_data_bucket": "you-know-i-do",
+  "table_id": "loan_2"
 }
