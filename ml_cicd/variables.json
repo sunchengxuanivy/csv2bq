@@ -1,0 +1,7 @@
+{
+  "dataproc_bucket": "ml-dataproc-bucket-mark-l-240702",
+  "dataproc_zone": "us-east1-b",
+  "gcp_project_id": "mark-l-240702",
+  "main_script_bucket": "main-scripts-bucket-mark-l-240702",
+  "service_account": "ml-dataproc@mark-l-240702.iam.gserviceaccount.com"
+}
