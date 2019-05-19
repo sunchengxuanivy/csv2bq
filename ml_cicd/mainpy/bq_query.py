@@ -16,10 +16,13 @@ def run_bq_query(bq_sql,
     client = bigquery.Client(target_project_id)
     dataset_ref = client.create_dataset(target_dataset, exists_ok=True)
     table_ref = dataset_ref.table(target_table)
-    if table_overwrite:
-        client.delete_table(table_ref, not_found_ok=True)
-
     job_config = bigquery.QueryJobConfig()
+
+    if table_overwrite:
+        job_config.write_disposition = bigquery.job.WriteDisposition.WRITE_TRUNCATE
+    else:
+        job_config.write_disposition = bigquery.job.WriteDisposition.WRITE_APPEND
+
     job_config.destination = table_ref
     job_config.use_legacy_sql = use_legacy_sql
     load_job = client.query(

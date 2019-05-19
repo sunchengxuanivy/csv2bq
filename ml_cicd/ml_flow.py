@@ -22,15 +22,16 @@ default_dag_args = {
     'project_id': models.Variable.get('gcp_project_id')
 }
 
-cluster_name = 'etl-ml-cluster-{{ ds_nodash }}'
+cluster_name = 'model-scoring-cluster-{{ ds_nodash }}'
 main_bucket = models.Variable.get('main_script_bucket')
 gcp_project_id = models.Variable.get('gcp_project_id')
 table_name = models.Variable.get('table_id')
 org_table = table_name
 org_dataset = models.Variable.get('org_dataset')
 
-snapshot_dataset = 'snapshots'
-snapshot_table = '{}_{{{{ ds_nodash }}}}'.format(table_name)
+model_monitoring_dataset = 'model_monitoring'
+model_monitoring_data_table = '{}_data_{{{{ ds_nodash }}}}'.format(table_name)
+model_monitoring_summary_table = '{}_data_summary'.format(table_name)
 
 fl_etl_query = """
 SELECT
@@ -66,11 +67,23 @@ SELECT
     ,COUNT(IF(purpose LIKE 'moving', 1, null)) AS purpose_moving
 
 
-FROM `mark-l-240702.unioned.loan`
+FROM `mark-l-240702.data_foundation.loan`
 GROUP BY 1, 2, 3, 4, 5, 6
     """
+
+summary_query = """
+select
+  CURRENT_DATE() AS RUNNING_DATE, 
+  sum(case when (term is null or trim(term) ='') then 1 else 0 end)/count(*) as term_missing_rate,
+  avg(SAFE_CAST(annual_inc as numeric)) as annual_inc_average,
+  avg(SAFE_CAST(loan_amnt as numeric)) as loan_amnt_average,
+  sum(case when (sub_grade is null or trim(term) ='') then 1 else 0 end)/count(*) as sub_grade_missing_rate,
+  sum(case when (home_ownership is null or trim(term) ='') then 1 else 0 end)/count(*) as home_ownership_missing_rate,
+  sum(case when (purpose is null or trim(term) ='') then 1 else 0 end)/count(*) as purpose_missing_rate
+  from `mark-l-240702.model_monitoring.loan_data_{{ ds_nodash }}`;
+"""
 with models.DAG(
-        'etl-ml',
+        'model_scoring',
         default_args=default_dag_args) as dag:
     # Create a Cloud Dataproc cluster.
     create_dataproc_cluster = dataproc_operator.DataprocClusterCreateOperator(
@@ -79,27 +92,28 @@ with models.DAG(
         cluster_name=cluster_name,
         init_actions_uris=['gs://dataproc-initialization-actions/python/pip-install.sh'],
         metadata={
-            'PIP_PACKAGES': 'google-cloud-bigquery==1.11.2 google-cloud-storage==1.15.0 xgboost==0.82 hdfs==2.5.2 pandas==0.24.2 gcsfs==0.2.2'},
+            'PIP_PACKAGES': 'google-cloud-bigquery==1.11.2 google-cloud-storage==1.15.0 xgboost==0.82 hdfs==2.5.2 pandas==0.24.2 gcsfs==0.2.2 pyarrow==0.13.0'},
         image_version='1.4-debian9',
         num_workers=2,
         service_account=models.Variable.get('service_account'),
         zone=models.Variable.get('dataproc_zone'),
-        master_machine_type='n1-standard-1',
+        master_machine_type='n1-standard-4',
         worker_machine_type='n1-standard-1')
 
-    input_bak = dataproc_operator.DataProcPySparkOperator(
-        task_id='save-input-bak',
+    backup_original_data = dataproc_operator.DataProcPySparkOperator(
+        task_id='backup_original_data',
         cluster_name=cluster_name,
         main='gs://{}/bq_query.py'.format(main_bucket),
-        arguments=['--sql', 'SELECT * FROM `mark-l-240702.unioned.loan`',
+        arguments=['--sql',
+                   'SELECT member_id, term, annual_inc, loan_amnt, sub_grade,home_ownership, purpose FROM `mark-l-240702.data_foundation.loan`',
                    '--target-project-id', gcp_project_id,
-                   '--target-dataset', snapshot_dataset,
-                   '--target-table', snapshot_table,
+                   '--target-dataset', model_monitoring_dataset,
+                   '--target-table', model_monitoring_data_table,
                    '--table-overwrite']
     )
 
-    fl_etl_table = dataproc_operator.DataProcPySparkOperator(
-        task_id='fl_etl_table',
+    fl_etl = dataproc_operator.DataProcPySparkOperator(
+        task_id='fl_etl',
         cluster_name=cluster_name,
         # TODO: current version only supports exporting csv to dataproc-attached gcs bucket.
         main='gs://{}/bq_query.py'.format(main_bucket),
@@ -112,4 +126,30 @@ with models.DAG(
                    'gs://{}/fl_etl.csv'.format(models.Variable.get('dataproc_bucket'))]
     )
 
-    create_dataproc_cluster >> [input_bak, fl_etl_table]
+    fl_ml = dataproc_operator.DataProcPySparkOperator(
+        task_id='fl_ml',
+        cluster_name=cluster_name,
+        main='gs://{}/ml.py'.format(main_bucket),
+        arguments=['fl_ml_loan_{{ ds_nodash }}']
+    )
+
+    data_summary = dataproc_operator.DataProcPySparkOperator(
+        task_id='data_summary',
+        cluster_name=cluster_name,
+        main='gs://{}/bq_query.py'.format(main_bucket),
+        arguments=['--sql', summary_query,
+                   '--target-project-id', gcp_project_id,
+                   '--target-dataset', model_monitoring_dataset,
+                   '--target-table', model_monitoring_summary_table]
+    )
+
+    delete_dataproc_cluster = dataproc_operator.DataprocClusterDeleteOperator(
+        task_id='delete_dataproc_cluster',
+        cluster_name=cluster_name,
+        # Setting trigger_rule to ALL_DONE causes the cluster to be deleted
+        # even if the Dataproc job fails.
+        trigger_rule=trigger_rule.TriggerRule.ALL_DONE)
+    create_dataproc_cluster >> [backup_original_data, fl_etl]
+    fl_etl >> fl_ml
+    backup_original_data >> data_summary
+    [data_summary, fl_ml] >> delete_dataproc_cluster

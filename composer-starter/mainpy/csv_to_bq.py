@@ -22,6 +22,7 @@ job_config = bigquery.LoadJobConfig()
 job_config.skip_leading_rows = 1
 job_config.quote_character = '\"'
 job_config.field_delimiter = ','
+job_config.write_disposition = bigquery.WriteDisposition.WRITE_TRUNCATE
 job_config.source_format = bigquery.SourceFormat.CSV
 table = '{}.{}.{}'.format(project_name, dataset_id, table_id)
 
