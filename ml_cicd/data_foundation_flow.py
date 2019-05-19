@@ -2,6 +2,7 @@ import datetime
 
 from airflow import models
 from airflow.contrib.operators import dataproc_operator
+from airflow.utils import trigger_rule
 
 yesterday = datetime.datetime.combine(
     datetime.datetime.today() - datetime.timedelta(1),
@@ -60,4 +61,11 @@ with models.DAG(
                    '--table-overwrite']
     )
 
-    create_dataproc_cluster >> cross_project_fetch_data
+    delete_dataproc_cluster = dataproc_operator.DataprocClusterDeleteOperator(
+        task_id='delete_dataproc_cluster',
+        cluster_name=cluster_name,
+        # Setting trigger_rule to ALL_DONE causes the cluster to be deleted
+        # even if the Dataproc job fails.
+        trigger_rule=trigger_rule.TriggerRule.ALL_DONE)
+
+    create_dataproc_cluster >> cross_project_fetch_data >> delete_dataproc_cluster
