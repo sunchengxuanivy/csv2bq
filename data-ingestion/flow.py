@@ -4,6 +4,34 @@ from airflow import models
 from airflow.contrib.operators import dataproc_operator
 from airflow.utils import trigger_rule
 
+"""
+    This file defines an airflow DAG to ingest csv data from GCS bucket to Bigquery table.
+    This DAG flow is located in source project.(MARK I, MARK II)
+    Please place this file in the DAG bucket after Composer is created.  
+        --> thus you will see graphic view in the Airflow portal.
+    
+    ** The DAG will be triggered immediately after the DAG file is placed, because the startdate is set to YESTERDAY.
+    
+    You may have to do below items to make the Airflow DAG valid:
+    1. Create a dedicated service account(dedicated for Dataproc cluster), grand role:
+            BigQuery Data Editor
+            BigQuery Job User
+            Dataproc Worker
+            Storage Object Admin
+            
+    2. create GSC bucket for dataproc
+    3. create another GSC bucket for placing python scripts.
+    4.* create a source GSC bucket, and place loan.csv inside. 
+    5. change values of "service_account", "dataproc_bucket", "main_script_bucket", "source_data_bucket" to what you
+    have just created in /data-ingestion/variables.json.
+    6. change other values if needed in the json file.
+    7. import json file to Composer: log into Composer's Airflow portal --> Admin --> Variables, browse variable.json 
+    and import.
+    8. Upload all scripts in /data-ingestion/mainpy directly under bucket created in STEP 3.
+    
+    Refresh Airflow portal and DAG is good to run. You may manually trigger and try out.
+
+"""
 yesterday = datetime.datetime.combine(
     datetime.datetime.today() - datetime.timedelta(1),
     datetime.datetime.min.time())
@@ -76,13 +104,6 @@ with models.DAG(
         main='gs://{}/rm_bucket_folder.py'.format(main_bucket),
         arguments=[source_data_bucket, intermediate_dir]
     )
-    #
-    # Run the Hadoop wordcount example installed on the Cloud Dataproc cluster
-    # master node.
-    # run_dataproc_hadoop = dataproc_operator.DataProcPySparkOperator(
-    #     task_id='run_dataproc_pyspark',
-    #     main='gs://src_raw-data_bucket/hello_bigquery.py',
-    #     cluster_name='quickstart-cluster-{{ ds_nodash }}')
 
     # Delete Cloud Dataproc cluster.
     delete_dataproc_cluster = dataproc_operator.DataprocClusterDeleteOperator(
@@ -94,5 +115,3 @@ with models.DAG(
     #
     # # Define DAG dependencies.
     create_dataproc_cluster >> create_bq_tables >> file_etl >> dump_data >> delete_inter_datafiles >> delete_dataproc_cluster
-    # create_dataproc_cluster >> create_bq_tables >> delete_dataproc_cluster
-    # >> delete_dataproc_cluster
