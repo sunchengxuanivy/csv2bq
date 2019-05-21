@@ -4,6 +4,41 @@ from airflow import models
 from airflow.contrib.operators import dataproc_operator
 from airflow.utils import trigger_rule
 
+"""
+    This file defines an airflow DAG to feature library ETL, model scoring (predicting), and raw_input_data backup and 
+    summary.
+    
+    This DAG flow is located in project MARK L.
+    Please place this file in the DAG bucket after Composer is created.  
+        --> thus you will see graphic view in the Airflow portal.
+    
+    ** The DAG will be triggered immediately after the DAG file is placed, because the startdate is set to YESTERDAY.
+    
+    You may have to do below items to make the Airflow DAG valid:
+    1. Create a dedicated service account(dedicated for Dataproc cluster), grand role:
+            BigQuery Data Editor
+            BigQuery Job User
+            Dataproc Worker
+            Storage Object Admin
+            
+    2. create GSC bucket for dataproc
+    3. create another GSC bucket for placing python scripts.
+    4. change values of "service_account", "dataproc_bucket", "main_script_bucket", "source_data_bucket" to what you
+    have just created in /ml-cicd/variables.json.
+    5. change other values if needed in the json file, eg, gcp_project_id, etc.
+    6. import json file to Composer: log into Composer's Airflow portal --> Admin --> Variables, browse variable.json 
+    and import.
+    7. Upload all scripts in /ml-cicd/mainpy directly under bucket created in STEP 3.
+    
+    Refresh Airflow portal and DAG is good to run. You may manually trigger and try out.
+    
+    data foundation result is saved in table                `mark-l-240702.data_foundation.loan`
+    feature library ETL result is saved in table            `mark-l-240702.feature_lib_etl.fl_etl_loan_yyyymmdd`
+    Ml model scoring(predicting) result is saved in table   `mark-l-240702.feature_lib_ml.fl_ml_loan_yyyymmdd`
+    raw_input_data bak result is saved in table             `mark-l-240702.model_monitoring.loan_data_yyyymmdd`
+    data summary result is saved in table                   `mark-l-240702.model_monitoring.loan_data_summary`
+"""
+
 yesterday = datetime.datetime.combine(
     datetime.datetime.today() - datetime.timedelta(1),
     datetime.datetime.min.time())

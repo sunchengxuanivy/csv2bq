@@ -4,6 +4,39 @@ from airflow import models
 from airflow.contrib.operators import dataproc_operator
 from airflow.utils import trigger_rule
 
+"""
+    This file defines an airflow DAG to do actual data backup and model performance monitorying.
+    
+    This DAG flow is located in project MARK L.
+    Please place this file in the DAG bucket after Composer is created.  
+        --> thus you will see graphic view in the Airflow portal.
+    
+    ** The DAG will be triggered immediately after the DAG file is placed, because the startdate is set to YESTERDAY.
+    
+    You may have to do below items to make the Airflow DAG valid:
+    1. Create a dedicated service account(dedicated for Dataproc cluster), grand role:
+            BigQuery Data Editor
+            BigQuery Job User
+            Dataproc Worker
+            Storage Object Admin ** this role is unnecessary in this flow, but all flows are using the same service
+            account to create dataproc. If you create a dedicated service account for this flow, not assigning this role
+            is also good.
+            
+    2. create GSC bucket for dataproc
+    3. create another GSC bucket for placing python scripts.
+    4. change values of "service_account", "dataproc_bucket", "main_script_bucket", "source_data_bucket" to what you
+    have just created in /ml-cicd/variables.json.
+    5. change other values if needed in the json file, eg, gcp_project_id, etc.
+    6. import json file to Composer: log into Composer's Airflow portal --> Admin --> Variables, browse variable.json 
+    and import.
+    7. Upload all scripts in /ml-cicd/mainpy directly under bucket created in STEP 3.
+    
+    Refresh Airflow portal and DAG is good to run. You may manually trigger and try out.
+    
+    actual data backup result is saved in table         `mark-l-240702.model_monitoring.loan_actual_int_rate_yyyymmdd`
+    model performance result is saved in table          `mark-l-240702.model_monitoring.model_performance_loan`
+"""
+
 yesterday = datetime.datetime.combine(
     datetime.datetime.today() - datetime.timedelta(1),
     datetime.datetime.min.time())

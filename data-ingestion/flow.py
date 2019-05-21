@@ -24,7 +24,7 @@ from airflow.utils import trigger_rule
     4.* create a source GSC bucket, and place loan.csv inside. 
     5. change values of "service_account", "dataproc_bucket", "main_script_bucket", "source_data_bucket" to what you
     have just created in /data-ingestion/variables.json.
-    6. change other values if needed in the json file.
+    6. change other values if needed in the json file, eg, gcp_project_id, etc.
     7. import json file to Composer: log into Composer's Airflow portal --> Admin --> Variables, browse variable.json 
     and import.
     8. Upload all scripts in /data-ingestion/mainpy directly under bucket created in STEP 3.

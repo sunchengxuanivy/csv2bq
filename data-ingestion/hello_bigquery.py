@@ -6,6 +6,11 @@ from google.cloud import bigquery
 # conf = SparkConf().setMaster("local").setAppName("load-data")
 # sc = SparkContext(conf=conf)
 
+"""
+    Hello World from Bigquery, @Matthew, you may ignore this script.
+"""
+
+
 
 client = bigquery.Client(project='fifty-shades-of-brown')
 dataset_id = 'my_dataset'
