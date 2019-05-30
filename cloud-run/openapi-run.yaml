@@ -1,0 +1,30 @@
+swagger: '2.0'
+info:
+  title: "PredictCloudRun"
+  description: Sample API on Cloud Endpoints with a Cloud Run backend
+  version: 1.0.0
+host: ivy-gcr-7jgvnh5pma-uc.a.run.app
+schemes:
+  - https
+produces:
+  - text
+x-google-backend:
+  address: https://asia-northeast1-mark-l-240702.cloudfunctions.net/predict-int-rate
+paths:
+  /predict:
+    post:
+      summary: Greet a user
+      operationId: postPredictCR
+      consumes:
+        - application/json
+      parameters:
+        - in: body
+          name: status
+          description: financial status
+          schema:
+            type: object
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            type: string
